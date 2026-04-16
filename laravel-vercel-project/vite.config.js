@@ -10,6 +10,10 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    // TAMBAHKAN BAGIAN INI:
+    build: {
+        outDir: 'dist',
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],
