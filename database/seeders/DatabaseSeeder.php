@@ -8,18 +8,10 @@ use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    public function run(): void
+public function run(): void
     {
-        // Buat Akun Admin (Agar kamu bisa login)
-        User::create([
-            'name' => 'Admin Lilis',
-            'email' => 'admin@peta.com',
-            'password' => Hash::make('password123'),
-        ]);
-
-        // Panggil Data Parkir
-        $this->call([
-            ParkingSpotSeeder::class,
-        ]);
+    $this->call([
+        ParkingSpotSeeder::class,
+    ]);
     }
 }
