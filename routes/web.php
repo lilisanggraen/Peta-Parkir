@@ -6,7 +6,7 @@ use App\Http\Controllers\Admin\AuthController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 
-// 1. Memaksa HTTPS di Railway agar tidak Error 419 Page Expired
+// 1. Memaksa HTTPS di Railway
 if (app()->environment('production')) {
     URL::forceScheme('https');
 }
@@ -18,34 +18,37 @@ Route::get('/', [MapController::class, 'index'])->name('map');
 Route::get('/api/map-data', [MapController::class, 'getMapData'])->name('api.map-data');
 
 // ============================================================
-// AUTHENTICATION (Mandiri)
+// AUTHENTICATION (Dibuat Manual & Terpisah)
+// Kita buat rute ini punya 2 nama agar cocok dengan Blade manapun
 // ============================================================
 Route::middleware('guest')->group(function () {
-    // Rute GET Login: Dikenali sebagai 'login' (oleh Laravel) dan 'admin.login' (oleh Blade)
-    Route::get('/admin/login', [AuthController::class, 'showLogin'])
-        ->name('login')
-        ->name('admin.login');
+    // Rute Tampilan Login
+    Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
 
-    // Rute POST Login: Dikenali sebagai 'login.post' dan 'admin.login.post' (oleh Blade kamu)
-    Route::post('/admin/login', [AuthController::class, 'login'])
-        ->name('login.post')
-        ->name('admin.login.post');
+    // Rute Proses Login (Kunci Perbaikan di Sini)
+    Route::post('/admin/login', [AuthController::class, 'login'])->name('login.post');
 });
 
-// Alias redirect jika akses /login langsung
+// Alias tambahan untuk keamanan (agar admin.login.post juga terbaca)
+Route::name('admin.')->group(function () {
+    Route::middleware('guest')->group(function () {
+        Route::get('/admin/login-alias', [AuthController::class, 'showLogin'])->name('login');
+        Route::post('/admin/login-alias', [AuthController::class, 'login'])->name('login.post');
+    });
+});
+
+// Alias redirect sederhana
 Route::get('/login', function () {
     return redirect()->route('login');
 });
 
 // ============================================================
-// ADMIN PANEL (Grup dengan Prefix admin. dan Middleware Auth)
+// ADMIN PANEL (Harus Login)
 // ============================================================
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
-    // Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Dashboard & Resources
     Route::get('/dashboard', function () {
         return view('admin.dashboard');
     })->name('dashboard');
@@ -54,7 +57,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 });
 
 // ============================================================
-// DEBUG TOOL (Hanya untuk memastikan user admin ada)
+// DEBUG TOOL
 // ============================================================
 Route::get('/debug-user', function () {
     $user = \App\Models\User::updateOrCreate(
