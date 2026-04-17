@@ -179,7 +179,7 @@
 
     <div class="sidebar-footer">
         <div style="font-size:0.68rem;color:rgba(255,255,255,0.2);padding:0 4px 8px;text-transform:uppercase;letter-spacing:.06em">Akun</div>
-        <form method="POST" action="{{ route('logout') }}">
+        <form method="POST" action="{{ route('admin.logout') }}">
             @csrf
             <button type="submit" class="logout-btn">
                 <i class="bi bi-box-arrow-left"></i> Keluar
@@ -216,4 +216,4 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 @stack('scripts')
 </body>
-</html>  
+</html>

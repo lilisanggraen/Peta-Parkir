@@ -53,14 +53,7 @@
             border:1px solid var(--border);color:var(--text-primary);cursor:pointer;
             display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s;}
         .theme-toggle:hover{background:var(--btn-hover);}
-        .btn-admin{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
-            border-radius:8px;font-size:.78rem;font-weight:600;text-decoration:none;
-            border:1px solid var(--border);color:var(--text-primary);background:var(--btn-bg);transition:all .2s;}
-        .btn-admin:hover{background:var(--btn-hover);color:var(--text-primary);}
-        .btn-dashboard{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
-            border-radius:8px;font-size:.78rem;font-weight:600;text-decoration:none;
-            background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;border:none;transition:all .2s;}
-        .btn-dashboard:hover{opacity:.9;color:#fff;}
+
         #map{position:fixed;top:56px;left:0;right:0;bottom:0;}
         .side-panel{position:fixed;top:72px;left:16px;bottom:16px;width:272px;z-index:500;
             display:flex;flex-direction:column;gap:10px;pointer-events:none;}
@@ -142,15 +135,6 @@
         <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Ganti tema">
             <i class="bi bi-sun-fill" id="theme-icon"></i>
         </button>
-        @auth
-        <a href="/admin/dashboard" class="btn-dashboard">
-            <i class="bi bi-speedometer2"></i> Dashboard Admin
-        </a>
-        @else
-        <a href="/login" class="btn-admin">
-            <i class="bi bi-lock-fill"></i> Login Admin
-        </a>
-        @endauth
     </div>
 </div>
 
