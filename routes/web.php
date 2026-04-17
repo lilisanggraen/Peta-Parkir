@@ -19,15 +19,20 @@ Route::get('/api/map-data', [MapController::class, 'getMapData'])->name('api.map
 
 // ============================================================
 // AUTHENTICATION (Mandiri)
-// Kita taruh di luar grup 'admin.' agar namanya murni 'login'
 // ============================================================
 Route::middleware('guest')->group(function () {
-    // Alamatnya tetap /admin/login tapi namanya 'login'
-    Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/admin/login', [AuthController::class, 'login'])->name('login.post');
+    // Rute GET Login: Dikenali sebagai 'login' (oleh Laravel) dan 'admin.login' (oleh Blade)
+    Route::get('/admin/login', [AuthController::class, 'showLogin'])
+        ->name('login')
+        ->name('admin.login');
+
+    // Rute POST Login: Dikenali sebagai 'login.post' dan 'admin.login.post' (oleh Blade kamu)
+    Route::post('/admin/login', [AuthController::class, 'login'])
+        ->name('login.post')
+        ->name('admin.login.post');
 });
 
-// Alias untuk redirect jika ada yang akses /login langsung
+// Alias redirect jika akses /login langsung
 Route::get('/login', function () {
     return redirect()->route('login');
 });
