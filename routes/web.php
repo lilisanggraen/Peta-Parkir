@@ -6,61 +6,58 @@ use App\Http\Controllers\Admin\AuthController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 
-// Memaksa HTTPS di lingkungan production (Railway) agar tidak error 419
+// 1. Memaksa HTTPS di Railway agar tidak Error 419 Page Expired
 if (app()->environment('production')) {
     URL::forceScheme('https');
 }
 
 // ============================================================
-// REDIRECT / LOGIN ALIAS
-// Penting: Agar middleware 'auth' tidak error 'Route [login] not defined'
-// ============================================================
-Route::get('/login', function () {
-    return redirect()->route('admin.login');
-})->name('login');
-
-// ============================================================
-// HALAMAN PUBLIK — Tidak perlu login
+// HALAMAN PUBLIK
 // ============================================================
 Route::get('/', [MapController::class, 'index'])->name('map');
 Route::get('/api/map-data', [MapController::class, 'getMapData'])->name('api.map-data');
 
 // ============================================================
-// ADMIN AUTH — Login & Logout
+// AUTHENTICATION (Mandiri)
+// Kita taruh di luar grup 'admin.' agar namanya murni 'login'
 // ============================================================
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::middleware('guest')->group(function () {
+    // Alamatnya tetap /admin/login tapi namanya 'login'
+    Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/admin/login', [AuthController::class, 'login'])->name('login.post');
+});
 
-    // Halaman login (hanya untuk yang belum login)
-    Route::middleware('guest')->group(function () {
-        Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-        Route::post('/login', [AuthController::class, 'login'])->name('login.post');
-    });
+// Alias untuk redirect jika ada yang akses /login langsung
+Route::get('/login', function () {
+    return redirect()->route('login');
+});
+
+// ============================================================
+// ADMIN PANEL (Grup dengan Prefix admin. dan Middleware Auth)
+// ============================================================
+Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
     // Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // ============================================================
-    // ADMIN PANEL — Harus sudah login
-    // ============================================================
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/dashboard', function () {
-            return view('admin.dashboard');
-        })->name('dashboard');
+    // Dashboard & Resources
+    Route::get('/dashboard', function () {
+        return view('admin.dashboard');
+    })->name('dashboard');
 
-        Route::resource('parking', ParkingSpotController::class);
-    });
+    Route::resource('parking', ParkingSpotController::class);
 });
 
 // ============================================================
-// DEBUG ROUTE (Hapus jika sudah berhasil login sekali)
+// DEBUG TOOL (Hanya untuk memastikan user admin ada)
 // ============================================================
 Route::get('/debug-user', function () {
     $user = \App\Models\User::updateOrCreate(
         ['email' => 'admin@parkir.com'],
         [
-            'name' => 'Admin Baru',
+            'name' => 'Admin Salatiga',
             'password' => \Illuminate\Support\Facades\Hash::make('rahasia123'),
         ]
     );
-    return "User berhasil dibuat/diperbarui: " . $user->email;
+    return "User siap digunakan: " . $user->email;
 });
