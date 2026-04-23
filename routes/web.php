@@ -4,12 +4,6 @@ use App\Http\Controllers\MapController;
 use App\Http\Controllers\Admin\ParkingSpotController;
 use App\Http\Controllers\Admin\AuthController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\URL;
-
-// 1. Memaksa HTTPS di Railway
-if (app()->environment('production')) {
-    URL::forceScheme('https');
-}
 
 // ============================================================
 // HALAMAN PUBLIK
@@ -18,46 +12,35 @@ Route::get('/', [MapController::class, 'index'])->name('map');
 Route::get('/api/map-data', [MapController::class, 'getMapData'])->name('api.map-data');
 
 // ============================================================
-// AUTHENTICATION (Dibuat Manual & Terpisah)
-// Kita buat rute ini punya 2 nama agar cocok dengan Blade manapun
+// AUTHENTICATION (Guest Middleware)
 // ============================================================
 Route::middleware('guest')->group(function () {
-    // Rute Tampilan Login
-    Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('login');
-
-    // Rute Proses Login (Kunci Perbaikan di Sini)
-    Route::post('/admin/login', [AuthController::class, 'login'])->name('login.post');
+    // Gunakan satu jalur utama untuk login agar tidak bingung
+    Route::get('/admin/login-alias', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/admin/login-alias', [AuthController::class, 'login'])->name('login.post');
 });
 
-// Alias tambahan untuk keamanan (agar admin.login.post juga terbaca)
-Route::name('admin.')->group(function () {
-    Route::middleware('guest')->group(function () {
-        Route::get('/admin/login-alias', [AuthController::class, 'showLogin'])->name('login');
-        Route::post('/admin/login-alias', [AuthController::class, 'login'])->name('login.post');
-    });
-});
-
-// Alias redirect sederhana
-Route::get('/login', function () {
-    return redirect()->route('login');
-});
+// Redirect jika ada yang akses /login atau /admin/login biasa
+Route::redirect('/login', '/admin/login-alias');
+Route::redirect('/admin/login', '/admin/login-alias');
 
 // ============================================================
 // ADMIN PANEL (Harus Login)
 // ============================================================
 Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
 
+    // Proses Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    // Dashboard Admin
+    Route::get('/dashboard', [MapController::class, 'adminDashboard'])->name('dashboard');
 
+    // CRUD Data Parkir
     Route::resource('parking', ParkingSpotController::class);
 });
 
 // ============================================================
-// DEBUG TOOL
+// DEBUG TOOL (Hanya untuk buat user pertama kali)
 // ============================================================
 Route::get('/debug-user', function () {
     $user = \App\Models\User::updateOrCreate(

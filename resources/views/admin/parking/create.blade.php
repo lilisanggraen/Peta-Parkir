@@ -30,34 +30,46 @@
                         <label class="form-label fw-semibold" style="font-size:.875rem">Tipe Geometri <span class="text-danger">*</span></label>
                         <select name="tipe" id="tipe-select" class="form-select @error('tipe') is-invalid @enderror">
                             <option value="">— Pilih Tipe —</option>
-                            <option value="point"    {{ old('tipe')=='point' ? 'selected':'' }}>📍 Point (Titik Lokasi)</option>
+                            <option value="point"    {{ old('tipe')=='point'    ? 'selected':'' }}>📍 Point (Titik Lokasi)</option>
                             <option value="polyline" {{ old('tipe')=='polyline' ? 'selected':'' }}>〰️ Polyline (Ruas Jalan)</option>
-                            <option value="polygon"  {{ old('tipe')=='polygon' ? 'selected':'' }}>⬡ Polygon (Area Parkir)</option>
+                            <option value="polygon"  {{ old('tipe')=='polygon'  ? 'selected':'' }}>⬡ Polygon (Area Parkir)</option>
                         </select>
                         @error('tipe')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
 
+                    {{-- POINT: cukup isi lat & lng, koordinat JSON otomatis --}}
                     <div id="point-fields" style="display:none">
+                        <div class="alert alert-info py-2 px-3 mb-3" style="font-size:.8rem">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Untuk <strong>Point</strong>, cukup isi Latitude & Longitude. Koordinat JSON dibuat otomatis.
+                        </div>
                         <div class="row g-2 mb-3">
                             <div class="col-6">
-                                <label class="form-label" style="font-size:.85rem">Latitude</label>
-                                <input type="text" name="lat" class="form-control" value="{{ old('lat') }}" placeholder="-7.3305">
+                                <label class="form-label" style="font-size:.85rem">Latitude <span class="text-danger">*</span></label>
+                                <input type="text" name="lat" id="lat-input" class="form-control" value="{{ old('lat') }}" placeholder="-7.3305">
                             </div>
                             <div class="col-6">
-                                <label class="form-label" style="font-size:.85rem">Longitude</label>
-                                <input type="text" name="lng" class="form-control" value="{{ old('lng') }}" placeholder="110.5084">
+                                <label class="form-label" style="font-size:.85rem">Longitude <span class="text-danger">*</span></label>
+                                <input type="text" name="lng" id="lng-input" class="form-control" value="{{ old('lng') }}" placeholder="110.5084">
                             </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold" style="font-size:.875rem">Koordinat JSON <span class="text-danger">*</span></label>
-                        <textarea name="koordinat" class="form-control font-monospace @error('koordinat') is-invalid @enderror"
-                                  rows="4" placeholder="Point: [-7.3305, 110.5084]&#10;Polyline/Polygon: [[-7.33, 110.50], [-7.34, 110.51]]"
-                                  style="font-size:.82rem">{{ old('koordinat') }}</textarea>
-                        @error('koordinat')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        <div style="font-size:.78rem;color:#64748b;margin-top:4px">
-                            Format array koordinat [lat, lng] untuk Point, atau array of arrays untuk Polyline/Polygon.
+                    {{-- POLYLINE / POLYGON: isi koordinat JSON manual --}}
+                    <div id="koordinat-fields" style="display:none">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:.875rem">
+                                Koordinat JSON <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="koordinat" id="koordinat-input"
+                                      class="form-control font-monospace @error('koordinat') is-invalid @enderror"
+                                      rows="5" style="font-size:.82rem"
+                                      placeholder="Polyline/Polygon:&#10;[&#10;  [-7.3305, 110.5084],&#10;  [-7.3310, 110.5090],&#10;  [-7.3320, 110.5095]&#10;]">{{ old('koordinat') }}</textarea>
+                            @error('koordinat')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div style="font-size:.78rem;color:#64748b;margin-top:5px">
+                                <strong>Format:</strong> Array of <code>[lat, lng]</code> — contoh:
+                                <code>[[-7.330, 110.508], [-7.331, 110.509]]</code>
+                            </div>
                         </div>
                     </div>
 
@@ -154,22 +166,26 @@
 @push('scripts')
 <script>
 function previewFoto(input) {
-    const wrap = document.getElementById('preview-wrap');
+    const wrap    = document.getElementById('preview-wrap');
     const preview = document.getElementById('foto-preview');
     if (input.files && input.files[0]) {
-        const reader = new FileReader();
+        const reader  = new FileReader();
         reader.onload = e => { preview.src = e.target.result; wrap.style.display = 'block'; };
         reader.readAsDataURL(input.files[0]);
     }
 }
 
+function toggleTipeFields(tipe) {
+    document.getElementById('point-fields').style.display     = tipe === 'point'                      ? 'block' : 'none';
+    document.getElementById('koordinat-fields').style.display = (tipe === 'polyline' || tipe === 'polygon') ? 'block' : 'none';
+}
+
 document.getElementById('tipe-select').addEventListener('change', function () {
-    document.getElementById('point-fields').style.display = this.value === 'point' ? 'block' : 'none';
+    toggleTipeFields(this.value);
 });
 
-// Restore if old value = point
-if ('{{ old("tipe") }}' === 'point') {
-    document.getElementById('point-fields').style.display = 'block';
-}
+// Restore on validation error
+const oldTipe = '{{ old("tipe") }}';
+if (oldTipe) toggleTipeFields(oldTipe);
 </script>
 @endpush

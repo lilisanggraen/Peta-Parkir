@@ -85,12 +85,12 @@ class ParkingSpotController extends Controller
 
     private function validateData(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'nama'             => 'required|string|max:255',
             'tipe'             => 'required|in:point,polyline,polygon',
             'lat'              => 'nullable|numeric|between:-90,90',
             'lng'              => 'nullable|numeric|between:-180,180',
-            'koordinat'        => 'required|string',
+            'koordinat'        => 'nullable|string',
             'alamat'           => 'required|string|max:500',
             'foto'             => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'penanggung_jawab' => 'required|string|max:255',
@@ -99,5 +99,18 @@ class ParkingSpotController extends Controller
             'status'           => 'required|in:aktif,tidak_aktif,habis_kontrak',
             'keterangan'       => 'nullable|string|max:1000',
         ]);
+
+        // Untuk tipe point: auto-generate koordinat dari lat/lng
+        // Admin cukup isi lat & lng, koordinat JSON dibuat otomatis
+        if ($request->tipe === 'point' && $request->lat && $request->lng) {
+            $validated['koordinat'] = json_encode([
+                (float) $request->lat,
+                (float) $request->lng,
+            ]);
+            $validated['lat'] = (float) $request->lat;
+            $validated['lng'] = (float) $request->lng;
+        }
+
+        return $validated;
     }
 }

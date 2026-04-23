@@ -11,8 +11,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // TAMBAHKAN BARIS INI
+        // 1. Agar HTTPS di Railway terdeteksi dengan benar (Anti-mantul)
         $middleware->trustProxies(at: '*');
+
+        // 2. Mengatur arah redirect otomatis
+        $middleware->redirectTo(
+            guests: '/admin/login-alias', // Jika belum login dan coba akses area admin
+            users: '/admin/dashboard'      // Jika sudah login dan coba akses halaman login
+        );
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

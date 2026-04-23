@@ -17,14 +17,29 @@ class MapController extends Controller
 
     public function getMapData()
     {
-        $spots = ParkingSpot::all()->map(function ($spot) {
+        $spots = ParkingSpot::where('status', 'aktif')->get()->map(function ($spot) {
+            $koordinat = null;
+
+            if ($spot->koordinat) {
+                $decoded = json_decode($spot->koordinat, true);
+
+                if ($spot->tipe === 'point') {
+                    // Format: [lat, lng] — langsung pakai lat/lng dari kolom DB
+                    $koordinat = null; // point pakai lat/lng langsung
+                } elseif (in_array($spot->tipe, ['polyline', 'polygon'])) {
+                    // Format array of arrays: [[lat,lng],[lat,lng],...]
+                    // Pastikan sudah dalam format [lat, lng] (bukan [lng, lat])
+                    $koordinat = $decoded;
+                }
+            }
+
             return [
                 'id'               => $spot->id,
                 'nama'             => $spot->nama,
                 'tipe'             => $spot->tipe,
-                'koordinat'        => json_decode($spot->koordinat),
-                'lat'              => $spot->lat,
-                'lng'              => $spot->lng,
+                'koordinat'        => $koordinat,
+                'lat'              => $spot->lat ? (float) $spot->lat : null,
+                'lng'              => $spot->lng ? (float) $spot->lng : null,
                 'alamat'           => $spot->alamat,
                 'foto_url'         => $spot->foto_url,
                 'penanggung_jawab' => $spot->penanggung_jawab,

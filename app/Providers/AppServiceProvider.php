@@ -3,14 +3,25 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\URL; // 1. Tambahkan baris ini
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
     public function boot(): void
     {
-        // 2. Tambahkan logika ini
-        if (config('app.env') === 'production') {
+        // PAKSA HTTPS di Railway/Production
+        if (app()->environment('production') || env('APP_ENV') === 'production') {
             URL::forceScheme('https');
         }
     }
