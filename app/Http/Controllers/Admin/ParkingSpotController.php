@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ParkingSpot;
 use Illuminate\Http\Request;
-use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+use Illuminate\Support\Facades\Http;
 
 class ParkingSpotController extends Controller
 {
@@ -40,13 +40,9 @@ class ParkingSpotController extends Controller
     {
         $validated = $this->validateData($request);
 
-        // Upload foto ke Cloudinary
         if ($request->hasFile('foto')) {
-            $uploaded = Cloudinary::upload($request->file('foto')->getRealPath(), [
-                'folder' => 'peta-parkir-salatiga',
-            ]);
-            // Simpan URL lengkap Cloudinary ke DB
-            $validated['foto'] = $uploaded->getSecurePath();
+            $url = $this->uploadToCloudinary($request->file('foto'));
+            if ($url) $validated['foto'] = $url;
         }
 
         ParkingSpot::create($validated);
@@ -64,21 +60,9 @@ class ParkingSpotController extends Controller
     {
         $validated = $this->validateData($request);
 
-        // Upload foto baru ke Cloudinary jika ada
         if ($request->hasFile('foto')) {
-            // Hapus foto lama di Cloudinary jika ada
-            if ($parking->foto && str_contains($parking->foto, 'cloudinary')) {
-                // Ekstrak public_id dari URL Cloudinary untuk dihapus
-                $publicId = $this->getCloudinaryPublicId($parking->foto);
-                if ($publicId) {
-                    Cloudinary::destroy($publicId);
-                }
-            }
-
-            $uploaded = Cloudinary::upload($request->file('foto')->getRealPath(), [
-                'folder' => 'peta-parkir-salatiga',
-            ]);
-            $validated['foto'] = $uploaded->getSecurePath();
+            $url = $this->uploadToCloudinary($request->file('foto'));
+            if ($url) $validated['foto'] = $url;
         }
 
         $parking->update($validated);
@@ -89,14 +73,6 @@ class ParkingSpotController extends Controller
 
     public function destroy(ParkingSpot $parking)
     {
-        // Hapus foto di Cloudinary jika ada
-        if ($parking->foto && str_contains($parking->foto, 'cloudinary')) {
-            $publicId = $this->getCloudinaryPublicId($parking->foto);
-            if ($publicId) {
-                Cloudinary::destroy($publicId);
-            }
-        }
-
         $parking->delete();
 
         return redirect()->route('admin.parking.index')
@@ -104,16 +80,33 @@ class ParkingSpotController extends Controller
     }
 
     /**
-     * Ekstrak public_id dari URL Cloudinary.
-     * Contoh URL: https://res.cloudinary.com/myapp/image/upload/v123/peta-parkir-salatiga/abc.jpg
-     * Public ID  : peta-parkir-salatiga/abc
+     * Upload foto langsung ke Cloudinary API tanpa package.
      */
-    private function getCloudinaryPublicId(string $url): ?string
+    private function uploadToCloudinary($file): ?string
     {
-        // Ambil bagian setelah /upload/
-        if (preg_match('/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i', $url, $matches)) {
-            return $matches[1];
+        $cloudName = env('CLOUDINARY_CLOUD_NAME');
+        $apiKey    = env('CLOUDINARY_KEY');
+        $apiSecret = env('CLOUDINARY_SECRET');
+
+        $timestamp = time();
+        $params    = "folder=peta-parkir-salatiga&timestamp={$timestamp}";
+        $signature = hash('sha256', $params . $apiSecret);
+
+        $response = Http::attach(
+            'file',
+            file_get_contents($file->getRealPath()),
+            $file->getClientOriginalName()
+        )->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
+            'api_key'   => $apiKey,
+            'timestamp' => $timestamp,
+            'signature' => $signature,
+            'folder'    => 'peta-parkir-salatiga',
+        ]);
+
+        if ($response->successful()) {
+            return $response->json('secure_url');
         }
+
         return null;
     }
 
@@ -134,7 +127,6 @@ class ParkingSpotController extends Controller
             'keterangan'       => 'nullable|string|max:1000',
         ]);
 
-        // Untuk tipe point: auto-generate koordinat dari lat/lng
         if ($request->tipe === 'point' && $request->lat && $request->lng) {
             $validated['koordinat'] = json_encode([
                 (float) $request->lat,
