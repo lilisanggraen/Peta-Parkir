@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ParkingSpot;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class ParkingSpotController extends Controller
 {
@@ -40,8 +40,13 @@ class ParkingSpotController extends Controller
     {
         $validated = $this->validateData($request);
 
+        // Upload foto ke Cloudinary
         if ($request->hasFile('foto')) {
-            $validated['foto'] = $request->file('foto')->store('parking', 'public');
+            $uploaded = Cloudinary::upload($request->file('foto')->getRealPath(), [
+                'folder' => 'peta-parkir-salatiga',
+            ]);
+            // Simpan URL lengkap Cloudinary ke DB
+            $validated['foto'] = $uploaded->getSecurePath();
         }
 
         ParkingSpot::create($validated);
@@ -59,11 +64,21 @@ class ParkingSpotController extends Controller
     {
         $validated = $this->validateData($request);
 
+        // Upload foto baru ke Cloudinary jika ada
         if ($request->hasFile('foto')) {
-            if ($parking->foto) {
-                Storage::disk('public')->delete($parking->foto);
+            // Hapus foto lama di Cloudinary jika ada
+            if ($parking->foto && str_contains($parking->foto, 'cloudinary')) {
+                // Ekstrak public_id dari URL Cloudinary untuk dihapus
+                $publicId = $this->getCloudinaryPublicId($parking->foto);
+                if ($publicId) {
+                    Cloudinary::destroy($publicId);
+                }
             }
-            $validated['foto'] = $request->file('foto')->store('parking', 'public');
+
+            $uploaded = Cloudinary::upload($request->file('foto')->getRealPath(), [
+                'folder' => 'peta-parkir-salatiga',
+            ]);
+            $validated['foto'] = $uploaded->getSecurePath();
         }
 
         $parking->update($validated);
@@ -74,13 +89,32 @@ class ParkingSpotController extends Controller
 
     public function destroy(ParkingSpot $parking)
     {
-        if ($parking->foto) {
-            Storage::disk('public')->delete($parking->foto);
+        // Hapus foto di Cloudinary jika ada
+        if ($parking->foto && str_contains($parking->foto, 'cloudinary')) {
+            $publicId = $this->getCloudinaryPublicId($parking->foto);
+            if ($publicId) {
+                Cloudinary::destroy($publicId);
+            }
         }
+
         $parking->delete();
 
         return redirect()->route('admin.parking.index')
             ->with('success', 'Data parkir berhasil dihapus!');
+    }
+
+    /**
+     * Ekstrak public_id dari URL Cloudinary.
+     * Contoh URL: https://res.cloudinary.com/myapp/image/upload/v123/peta-parkir-salatiga/abc.jpg
+     * Public ID  : peta-parkir-salatiga/abc
+     */
+    private function getCloudinaryPublicId(string $url): ?string
+    {
+        // Ambil bagian setelah /upload/
+        if (preg_match('/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i', $url, $matches)) {
+            return $matches[1];
+        }
+        return null;
     }
 
     private function validateData(Request $request): array
@@ -101,7 +135,6 @@ class ParkingSpotController extends Controller
         ]);
 
         // Untuk tipe point: auto-generate koordinat dari lat/lng
-        // Admin cukup isi lat & lng, koordinat JSON dibuat otomatis
         if ($request->tipe === 'point' && $request->lat && $request->lng) {
             $validated['koordinat'] = json_encode([
                 (float) $request->lat,

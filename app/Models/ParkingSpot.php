@@ -21,11 +21,25 @@ class ParkingSpot extends Model
         'tanggal_akhir' => 'date',
     ];
 
+    /**
+     * foto_url:
+     * - Jika foto adalah URL Cloudinary (http...) → langsung pakai
+     * - Jika foto adalah path lokal lama → pakai storage()
+     * - Jika tidak ada foto → pakai placeholder
+     */
     public function getFotoUrlAttribute(): string
     {
-        return $this->foto
-            ? asset('storage/' . $this->foto)
-            : asset('images/no-image.png');
+        if (!$this->foto) {
+            return asset('images/no-image.png');
+        }
+
+        // Sudah berupa URL penuh (Cloudinary)
+        if (str_starts_with($this->foto, 'http')) {
+            return $this->foto;
+        }
+
+        // Path lokal lama (storage)
+        return asset('storage/' . $this->foto);
     }
 
     public function scopeAktif($query)
@@ -33,7 +47,6 @@ class ParkingSpot extends Model
         return $query->where('status', 'aktif');
     }
 
-    // Cek apakah kontrak sudah expired
     public function getIsExpiredAttribute(): bool
     {
         return $this->tanggal_akhir < Carbon::today();
